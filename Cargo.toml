@@ -1,0 +1,3 @@
+[workspace]
+resolver = "3"
+members = ["nimbus-corehost", "nimbus-editor", "nimbus-runtime"]
