@@ -2,6 +2,10 @@ pub mod rendering;
 pub mod physics;
 pub mod core;
 pub mod audio;
+mod resources;
+mod scene;
+mod scripting;
+mod ui;
 
 use std::sync::Arc;
 use winit::application::ApplicationHandler;

@@ -20,8 +20,9 @@ pub struct RenderContext {
 impl RenderContext {
     pub fn new(window: Arc<Window>) -> Result<Self, NimbusError> {
         let library = VulkanLibrary::new()?;
-        
+
         let instance_extensions = InstanceExtensions {
+            #[cfg(target_os = "macos")]
             khr_portability_enumeration: true,
             #[cfg(target_os = "macos")]
             ext_metal_surface: true,
@@ -29,8 +30,9 @@ impl RenderContext {
             khr_win32_surface: true,
             ..Default::default()
         };
-        
+
         let instance = Instance::new(library, InstanceCreateInfo {
+            #[cfg(target_os = "macos")]
             flags: InstanceCreateFlags::ENUMERATE_PORTABILITY,
             enabled_extensions: instance_extensions,
             ..Default::default()
@@ -71,7 +73,7 @@ impl RenderContext {
         let image_format = physical_device
             .surface_formats(&surface, Default::default())
             ?[0].0;
-        
+
         let (swapchain, _) = Swapchain::new(
             device.clone(),
             surface.clone(),
@@ -98,31 +100,48 @@ impl RenderContext {
     }
 }
 
-fn select_physical_device(
+pub fn select_physical_device(
     instance: &Arc<Instance>,
     surface: &Arc<Surface>,
-    device_extensions: &DeviceExtensions,
-    queue_flags: QueueFlags
+    required_extensions: &DeviceExtensions,
+    required_flags: QueueFlags,
 ) -> Result<(Arc<PhysicalDevice>, u32), NimbusError> {
-    instance
-            .enumerate_physical_devices()?
-            .filter(|p| p.supported_extensions().contains(device_extensions))
-            .filter_map(|p| {
-                p.queue_family_properties()
-                    .iter()
-                    .enumerate()
-                    .position(|(i, q)| {
-                        q.queue_flags.contains(queue_flags)
-                            && p.surface_support(i as u32, surface).unwrap_or(false)
-                    })
-                    .map(|q| (p, q as u32))
-            })
-            .min_by_key(|(p, _)| match p.properties().device_type {
-                PhysicalDeviceType::DiscreteGpu => 0,
-                PhysicalDeviceType::IntegratedGpu => 1,
-                PhysicalDeviceType::VirtualGpu => 2,
-                PhysicalDeviceType::Cpu => 3,
-                _ => 4,
-            })
-            .ok_or(NimbusError::PhysicalDeviceNotFound(Box::from(*device_extensions)))
+    let physical_devices = instance.enumerate_physical_devices()?;
+
+    let suitable_device = physical_devices
+        .filter(|device| device.supported_extensions().contains(required_extensions))
+        .filter_map(|device| {
+            find_suitable_queue_family(&device, surface, required_flags)
+                .map(|queue_index| (device, queue_index))
+        })
+        .min_by_key(|(device, _)| device_score(device));
+
+    suitable_device.ok_or_else(|| {
+        NimbusError::PhysicalDeviceNotFound(Box::new(*required_extensions))
+    })
+}
+
+fn find_suitable_queue_family(
+    device: &PhysicalDevice,
+    surface: &Arc<Surface>,
+    required_flags: QueueFlags,
+) -> Option<u32> {
+    device.queue_family_properties()
+        .iter()
+        .enumerate()
+        .find(|(index, props)| {
+            props.queue_flags.contains(required_flags)
+                && device.surface_support(*index as u32, surface).unwrap_or(false)
+        })
+        .map(|(index, _)| index as u32)
+}
+
+fn device_score(device: &PhysicalDevice) -> u8 {
+    match device.properties().device_type {
+        PhysicalDeviceType::DiscreteGpu => 0,
+        PhysicalDeviceType::IntegratedGpu => 1,
+        PhysicalDeviceType::VirtualGpu => 2,
+        PhysicalDeviceType::Cpu => 3,
+        _ => 4,
+    }
 }
