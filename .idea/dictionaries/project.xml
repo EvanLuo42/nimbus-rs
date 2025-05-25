@@ -3,6 +3,8 @@
     <words>
       <w>bindgen</w>
       <w>hostfxr</w>
+      <w>swapchain</w>
+      <w>winit</w>
     </words>
   </dictionary>
 </component>

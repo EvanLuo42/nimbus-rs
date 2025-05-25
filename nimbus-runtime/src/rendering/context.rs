@@ -1,0 +1,128 @@
+use crate::core::errors::NimbusError;
+use std::sync::Arc;
+use vulkano::device::physical::{PhysicalDevice, PhysicalDeviceType};
+use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Queue, QueueCreateInfo, QueueFlags};
+use vulkano::image::ImageUsage;
+use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo, InstanceExtensions};
+use vulkano::swapchain::{Surface, Swapchain, SwapchainCreateInfo};
+use vulkano::VulkanLibrary;
+use winit::window::Window;
+
+pub struct RenderContext {
+    pub instance: Arc<Instance>,
+    pub surface: Arc<Surface>,
+    pub physical_device: Arc<PhysicalDevice>,
+    pub device: Arc<Device>,
+    pub graphics_queue: Arc<Queue>,
+    pub swapchain: Arc<Swapchain>
+}
+
+impl RenderContext {
+    pub fn new(window: Arc<Window>) -> Result<Self, NimbusError> {
+        let library = VulkanLibrary::new()?;
+        
+        let instance_extensions = InstanceExtensions {
+            khr_portability_enumeration: true,
+            #[cfg(target_os = "macos")]
+            ext_metal_surface: true,
+            #[cfg(target_os = "windows")]
+            khr_win32_surface: true,
+            ..Default::default()
+        };
+        
+        let instance = Instance::new(library, InstanceCreateInfo {
+            flags: InstanceCreateFlags::ENUMERATE_PORTABILITY,
+            enabled_extensions: instance_extensions,
+            ..Default::default()
+        })?;
+        let surface = Surface::from_window(instance.clone(), window.clone())?;
+
+        let device_extensions = DeviceExtensions {
+            khr_swapchain: true,
+            ..DeviceExtensions::empty()
+        };
+        let queue_flags = QueueFlags::GRAPHICS;
+
+        let (physical_device, queue_family_index) = select_physical_device(
+            &instance,
+            &surface,
+            &device_extensions,
+            queue_flags
+        )?;
+
+        let (device, mut queues) = Device::new(
+            physical_device.clone(),
+            DeviceCreateInfo {
+                queue_create_infos: vec![QueueCreateInfo {
+                    queue_family_index,
+                    ..Default::default()
+                }],
+                enabled_extensions: device_extensions,
+                ..Default::default()
+            }
+        )?;
+
+        let graphics_queue = queues.next().unwrap();
+
+        let caps = physical_device
+            .surface_capabilities(&surface, Default::default())?;
+        let image_extent = window.inner_size().into();
+        let composite_alpha = caps.supported_composite_alpha.into_iter().next().unwrap();
+        let image_format = physical_device
+            .surface_formats(&surface, Default::default())
+            ?[0].0;
+        
+        let (swapchain, _) = Swapchain::new(
+            device.clone(),
+            surface.clone(),
+            SwapchainCreateInfo {
+                min_image_count: caps.min_image_count + 1,
+                image_format,
+                image_extent,
+                image_usage: ImageUsage::COLOR_ATTACHMENT,
+                composite_alpha,
+                ..Default::default()
+            }
+        )?;
+
+        Ok(
+            Self {
+                instance,
+                surface,
+                physical_device,
+                device,
+                graphics_queue,
+                swapchain,
+            }
+        )
+    }
+}
+
+fn select_physical_device(
+    instance: &Arc<Instance>,
+    surface: &Arc<Surface>,
+    device_extensions: &DeviceExtensions,
+    queue_flags: QueueFlags
+) -> Result<(Arc<PhysicalDevice>, u32), NimbusError> {
+    instance
+            .enumerate_physical_devices()?
+            .filter(|p| p.supported_extensions().contains(device_extensions))
+            .filter_map(|p| {
+                p.queue_family_properties()
+                    .iter()
+                    .enumerate()
+                    .position(|(i, q)| {
+                        q.queue_flags.contains(queue_flags)
+                            && p.surface_support(i as u32, surface).unwrap_or(false)
+                    })
+                    .map(|q| (p, q as u32))
+            })
+            .min_by_key(|(p, _)| match p.properties().device_type {
+                PhysicalDeviceType::DiscreteGpu => 0,
+                PhysicalDeviceType::IntegratedGpu => 1,
+                PhysicalDeviceType::VirtualGpu => 2,
+                PhysicalDeviceType::Cpu => 3,
+                _ => 4,
+            })
+            .ok_or(NimbusError::PhysicalDeviceNotFound(Box::from(*device_extensions)))
+}
