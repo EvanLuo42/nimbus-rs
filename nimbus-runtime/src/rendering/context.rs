@@ -92,10 +92,7 @@ impl RenderContext {
             }
         )?;
         
-        let memory_allocator = Arc::new(StandardMemoryAllocator::new(
-            device.clone(),
-            Default::default()
-        ));
+        let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
         
         let command_allocator = Arc::new(StandardCommandBufferAllocator::new(
             device.clone(),
