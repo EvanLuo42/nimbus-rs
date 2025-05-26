@@ -1,20 +1,25 @@
 use crate::core::errors::NimbusError;
 use std::sync::Arc;
+use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::device::physical::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Queue, QueueCreateInfo, QueueFlags};
 use vulkano::image::ImageUsage;
 use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo, InstanceExtensions};
+use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::swapchain::{Surface, Swapchain, SwapchainCreateInfo};
 use vulkano::VulkanLibrary;
 use winit::window::Window;
 
+#[derive(Clone)]
 pub struct RenderContext {
     pub instance: Arc<Instance>,
     pub surface: Arc<Surface>,
     pub physical_device: Arc<PhysicalDevice>,
     pub device: Arc<Device>,
     pub graphics_queue: Arc<Queue>,
-    pub swapchain: Arc<Swapchain>
+    pub swapchain: Arc<Swapchain>,
+    pub memory_allocator: Arc<StandardMemoryAllocator>,
+    pub command_allocator: Arc<StandardCommandBufferAllocator>
 }
 
 impl RenderContext {
@@ -86,6 +91,16 @@ impl RenderContext {
                 ..Default::default()
             }
         )?;
+        
+        let memory_allocator = Arc::new(StandardMemoryAllocator::new(
+            device.clone(),
+            Default::default()
+        ));
+        
+        let command_allocator = Arc::new(StandardCommandBufferAllocator::new(
+            device.clone(),
+            Default::default()
+        ));
 
         Ok(
             Self {
@@ -95,6 +110,8 @@ impl RenderContext {
                 device,
                 graphics_queue,
                 swapchain,
+                memory_allocator,
+                command_allocator,
             }
         )
     }

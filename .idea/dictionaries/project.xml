@@ -4,6 +4,7 @@
       <w>bindgen</w>
       <w>hostfxr</w>
       <w>swapchain</w>
+      <w>texcoord</w>
       <w>winit</w>
     </words>
   </dictionary>

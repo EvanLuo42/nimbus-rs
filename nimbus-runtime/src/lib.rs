@@ -58,7 +58,7 @@ impl ApplicationHandler for Engine {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
                 if let Some(renderer) = &mut self.renderer {
-                    renderer.render();
+                    let _ = renderer.render();
                 }
                 self.window.as_ref().unwrap().request_redraw();
             }

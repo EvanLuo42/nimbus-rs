@@ -6,8 +6,11 @@ pub enum NimbusError {
     #[error("Vulkan Error: {0}")]
     VulkanError(#[from] vulkano::VulkanError),
     
-    #[error("Validated Vulkan Error: {0}")]
+    #[error("Validated Vulkan Error")]
     ValidatedVulkanError(#[from] vulkano::Validated<vulkano::VulkanError>),
+    
+    #[error("Vulkan Validation Error: {0}")]
+    ValidationError(#[from] Box<vulkano::ValidationError>),
     
     #[error("Failed to load vulkan library: {0}")]
     LoadVulkanLibraryError(#[from] vulkano::LoadingError),
@@ -19,5 +22,11 @@ pub enum NimbusError {
     PhysicalDeviceNotFound(Box<DeviceExtensions>),
     
     #[error("Couldn't find queue family within the given physical device: {:?}", .0)]
-    QueueFamilyNotFound(QueueFlags)
+    QueueFamilyNotFound(QueueFlags),
+    
+    #[error("Failed to build thread pool: {0}")]
+    ThreadPoolBuildError(#[from] rayon::ThreadPoolBuildError),
+
+    #[error("Failed to execute command buffer: {0}")]
+    CommandBufferExecError(#[from] vulkano::command_buffer::CommandBufferExecError)
 }
