@@ -1,4 +1,4 @@
-use crate::core::math::{Vec2, Vec3};
+use glam::{Vec2, Vec3};
 use vulkano::buffer::BufferContents;
 use vulkano::pipeline::graphics::vertex_input::Vertex;
 

@@ -7,7 +7,6 @@ edition = "2024"
 vulkano = "0.35"
 winit = "0.30"
 thiserror = "2.0"
-nalgebra = "0.33"
 rayon = "1.10"
 num_cpus = "1.16"
-vulkano-shaders = "0.35"
+glam = { version = "0.30", features = ["bytemuck"] }

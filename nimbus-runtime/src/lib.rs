@@ -7,7 +7,7 @@ pub mod scene;
 pub mod scripting;
 pub mod ui;
 
-pub use nalgebra;
+pub use glam;
 
 use crate::rendering::renderer::Renderer;
 use std::sync::Arc;

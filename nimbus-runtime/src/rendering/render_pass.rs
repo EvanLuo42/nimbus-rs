@@ -1,7 +1,7 @@
 use crate::core::errors::NimbusError;
+use crate::rendering::context::RenderContext;
 use std::sync::Arc;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SecondaryAutoCommandBuffer};
-use crate::rendering::context::RenderContext;
 
 pub struct RenderPass {
     pub name: String,

@@ -1,10 +1,10 @@
-use nalgebra::{Matrix4, Point3, Vector3};
+use glam::{Mat4, Vec3};
 
 #[derive(Copy, Clone, Default)]
 pub struct Camera {
-    pub position: Point3<f32>,
-    pub target: Point3<f32>,
-    pub up: Vector3<f32>,
+    pub position: Vec3,
+    pub target: Vec3,
+    pub up: Vec3,
     pub fov_y: f32,
     pub aspect_ratio: f32,
     pub near: f32,
@@ -12,15 +12,15 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn view_matrix(&self) -> Matrix4<f32> {
-        Matrix4::look_at_rh(&self.position, &self.target, &self.up)
+    pub fn view_matrix(&self) -> Mat4 {
+        Mat4::look_at_rh(self.position, self.target, self.up)
     }
 
-    pub fn projection_matrix(&self) -> Matrix4<f32> {
-        Matrix4::new_perspective(self.aspect_ratio, self.fov_y, self.near, self.far)
+    pub fn projection_matrix(&self) -> Mat4 {
+        Mat4::perspective_rh(self.aspect_ratio, self.fov_y, self.near, self.far)
     }
 
-    pub fn view_proj_matrix(&self) -> Matrix4<f32> {
+    pub fn view_proj_matrix(&self) -> Mat4 {
         self.projection_matrix() * self.view_matrix()
     }
 }

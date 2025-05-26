@@ -1,1 +1,1 @@
-mod shader;
+pub mod shader;

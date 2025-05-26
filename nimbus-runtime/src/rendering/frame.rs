@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use vulkano::command_buffer::{CommandBufferExecFuture, PrimaryAutoCommandBuffer};
-use vulkano::swapchain::{acquire_next_image, SwapchainAcquireFuture, SwapchainPresentInfo};
-use vulkano::sync::GpuFuture;
 use crate::core::errors::NimbusError;
 use crate::rendering::context::RenderContext;
+use std::sync::Arc;
+use vulkano::command_buffer::PrimaryAutoCommandBuffer;
+use vulkano::swapchain::{acquire_next_image, SwapchainAcquireFuture, SwapchainPresentInfo};
+use vulkano::sync::GpuFuture;
 
 pub struct FrameManager;
 
