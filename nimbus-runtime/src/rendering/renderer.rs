@@ -19,6 +19,6 @@ impl Renderer {
     }
     
     pub fn render(&mut self) {
-        todo!()
+        
     }
 }

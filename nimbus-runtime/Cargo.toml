@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-vulkano = "0.35.1"
-winit = "0.30.11"
-thiserror = "2.0.12"
+vulkano = "0.35"
+winit = "0.30"
+thiserror = "2.0"
+nalgebra = "0.33"

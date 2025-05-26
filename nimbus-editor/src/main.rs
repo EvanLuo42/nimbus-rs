@@ -1,5 +1,10 @@
-use nimbus_runtime::Engine;
+use nimbus_runtime::{Engine, WindowAttributes};
 
 fn main() {
-    let engine = Engine::new();
+    let mut engine = Engine::with_window_attributes(
+        WindowAttributes::default()
+            .with_title("Nimbus Engine")
+            .with_resizable(true)
+    );
+    engine.run();
 }

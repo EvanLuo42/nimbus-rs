@@ -100,7 +100,7 @@ impl RenderContext {
     }
 }
 
-pub fn select_physical_device(
+fn select_physical_device(
     instance: &Arc<Instance>,
     surface: &Arc<Surface>,
     required_extensions: &DeviceExtensions,
