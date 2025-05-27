@@ -1,11 +1,12 @@
 use crate::core::errors::NimbusError;
 use crate::rendering::context::RenderContext;
 use crate::rendering::frame::FrameManager;
-use crate::rendering::pipeline::{BasicPipeline, RenderPipeline};
+use crate::rendering::pipeline::RenderPipeline;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::cmp::max;
 use std::sync::Arc;
 use winit::window::Window;
+use crate::rendering::pipelines::clear::ClearPipeline;
 
 pub struct Renderer {
     pub render_context: RenderContext,
@@ -21,7 +22,7 @@ impl Renderer {
             .num_threads(max(1, (num_cpus::get() as isize - 2) as usize))
             .thread_name(|i| format!("RenderWorker-{i}"))
             .build()?;
-        let pipeline = Arc::new(BasicPipeline::new(&render_context)?);
+        let pipeline = Arc::new(ClearPipeline::new(&render_context)?);
         Ok(
             Self {
                 render_context,

@@ -28,5 +28,10 @@ pub enum NimbusError {
     ThreadPoolBuildError(#[from] rayon::ThreadPoolBuildError),
 
     #[error("Failed to execute command buffer: {0}")]
-    CommandBufferExecError(#[from] vulkano::command_buffer::CommandBufferExecError)
+    CommandBufferExecError(#[from] vulkano::command_buffer::CommandBufferExecError),
+
+    #[error("Failed to allocate image: {0}")]
+    AllocateImageError(#[from] vulkano::Validated<vulkano::image::AllocateImageError>)
 }
+
+pub type NimbusResult<T> = Result<T, NimbusError>;

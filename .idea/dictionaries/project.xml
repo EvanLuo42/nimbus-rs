@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>bindgen</w>
+      <w>gbuffer</w>
       <w>hostfxr</w>
       <w>swapchain</w>
       <w>texcoord</w>
