@@ -1,6 +1,7 @@
 use crate::core::errors::NimbusError;
 use std::sync::Arc;
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::physical::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Queue, QueueCreateInfo, QueueFlags};
 use vulkano::image::{Image, ImageUsage};
@@ -20,7 +21,8 @@ pub struct RenderContext {
     pub swapchain: Arc<Swapchain>,
     pub images: Vec<Arc<Image>>,
     pub memory_allocator: Arc<StandardMemoryAllocator>,
-    pub command_allocator: Arc<StandardCommandBufferAllocator>
+    pub command_allocator: Arc<StandardCommandBufferAllocator>,
+    pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>
 }
 
 impl RenderContext {
@@ -99,6 +101,11 @@ impl RenderContext {
             device.clone(),
             Default::default()
         ));
+        
+        let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(
+            device.clone(),
+            Default::default()
+        ));
 
         Ok(
             Self {
@@ -111,6 +118,7 @@ impl RenderContext {
                 images,
                 memory_allocator,
                 command_allocator,
+                descriptor_set_allocator
             }
         )
     }

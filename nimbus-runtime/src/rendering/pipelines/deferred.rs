@@ -1,9 +1,10 @@
 use crate::core::errors::{NimbusError, NimbusResult};
+use crate::rendering::buffers::VertexBuffer;
 use crate::rendering::context::RenderContext;
 use crate::rendering::frame::FrameContext;
-use crate::rendering::material::MaterialId;
 use crate::rendering::mesh::Submesh;
 use crate::rendering::pipeline::RenderPipeline;
+use crate::resources::material::MaterialId;
 use crate::scene::object::SceneObject;
 use crate::scene::Scene;
 use std::collections::HashMap;
@@ -13,21 +14,21 @@ use vulkano::format::Format;
 use vulkano::image::view::ImageView;
 use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
-use vulkano::pipeline::graphics::vertex_input::{Vertex, VertexDefinition};
-use vulkano::pipeline::graphics::viewport::{Viewport, ViewportState};
-use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::graphics::color_blend::{ColorBlendAttachmentState, ColorBlendState};
-use vulkano::pipeline::graphics::GraphicsPipelineCreateInfo;
 use vulkano::pipeline::graphics::input_assembly::InputAssemblyState;
 use vulkano::pipeline::graphics::multisample::MultisampleState;
 use vulkano::pipeline::graphics::rasterization::RasterizationState;
+use vulkano::pipeline::graphics::vertex_input::{Vertex, VertexDefinition};
+use vulkano::pipeline::graphics::viewport::{Viewport, ViewportState};
+use vulkano::pipeline::graphics::GraphicsPipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
+use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::pipeline::graphics::depth_stencil::{DepthState, DepthStencilState};
 use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass, Subpass};
-use crate::rendering::buffers::VertexBuffer;
 
 pub struct DeferredPipeline {
-    scene: Arc<Scene>,
-    material_batches: HashMap<MaterialId, Vec<RenderInstance>>,
+    scene: Option<Arc<Scene>>,
+    material_batches: Option<HashMap<MaterialId, Vec<RenderInstance>>>,
 
     deferred_pass: Arc<RenderPass>,
     
@@ -36,19 +37,7 @@ pub struct DeferredPipeline {
 }
 
 impl DeferredPipeline {
-    pub fn new(ctx: &RenderContext, scene: Arc<Scene>) -> NimbusResult<Self> {
-        let mut material_batches: HashMap<MaterialId, Vec<RenderInstance>> = HashMap::new();
-        for object in &scene.objects {
-            for submesh in &object.mesh.submeshes {
-                material_batches.entry(submesh.material.id)
-                    .or_default()
-                    .push(RenderInstance {
-                        object: object.clone(),
-                        submesh: submesh.clone()
-                    });
-            }
-        }
-
+    pub fn new(ctx: &RenderContext) -> NimbusResult<Self> {
         let swapchain_image_count = ctx.swapchain.image_count();
         let deferred_pass = vulkano::single_pass_renderpass!(
             ctx.device.clone(),
@@ -66,7 +55,7 @@ impl DeferredPipeline {
                     store_op: Store
                 },
                 material: {
-                    format: Format::R8G8B8_UNORM,
+                    format: Format::R8G8B8A8_UNORM,
                     samples: 1,
                     load_op: Clear,
                     store_op: Store
@@ -86,10 +75,10 @@ impl DeferredPipeline {
 
         let mut gbuffer_framebuffers = Vec::new();
         for _ in 0..swapchain_image_count {
-            let albedo_image = create_image(ctx, Format::R8G8B8A8_UNORM)?;
-            let normal_image = create_image(ctx, Format::R16G16B16A16_SFLOAT)?;
-            let material_image = create_image(ctx, Format::R8G8B8_UNORM)?;
-            let depth_image = create_image(ctx, Format::D32_SFLOAT)?;
+            let albedo_image = create_image(ctx, Format::R8G8B8A8_UNORM, ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED | ImageUsage::INPUT_ATTACHMENT)?;
+            let normal_image = create_image(ctx, Format::R16G16B16A16_SFLOAT, ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED | ImageUsage::INPUT_ATTACHMENT)?;
+            let material_image = create_image(ctx, Format::R8G8B8A8_UNORM, ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED | ImageUsage::INPUT_ATTACHMENT)?;
+            let depth_image = create_image(ctx, Format::D32_SFLOAT, ImageUsage::DEPTH_STENCIL_ATTACHMENT)?;
 
             let albedo_view = ImageView::new_default(albedo_image)?;
             let normal_view = ImageView::new_default(normal_image)?;
@@ -153,6 +142,7 @@ impl DeferredPipeline {
                     gbuffer_subpass.num_color_attachments(),
                     ColorBlendAttachmentState::default()
                 )),
+                depth_stencil_state: Some(DepthStencilState::simple_depth_test()),
                 subpass: Some(gbuffer_subpass.into()),
                 ..GraphicsPipelineCreateInfo::layout(layout)
             }
@@ -160,13 +150,28 @@ impl DeferredPipeline {
         
         Ok(
             Self {
-                scene,
-                material_batches,
+                scene: None,
+                material_batches: None,
                 gbuffer_framebuffers,
                 deferred_pass,
                 gbuffer_graphics_pipeline,
             }
         )
+    }
+
+    pub fn add_scene(&mut self, scene: Arc<Scene>) {
+        let mut material_batches: HashMap<MaterialId, Vec<RenderInstance>> = HashMap::new();
+        for object in &scene.objects {
+            for submesh in &object.mesh.submeshes {
+                material_batches.entry(submesh.material.id)
+                    .or_default()
+                    .push(RenderInstance {
+                        object: object.clone(),
+                        submesh: submesh.clone()
+                    });
+            }
+        }
+        self.material_batches = Some(material_batches);
     }
 
     pub fn gbuffer_subpass(&self, ctx: &RenderContext, frame: &FrameContext) -> NimbusResult<Arc<SecondaryAutoCommandBuffer>> {
@@ -184,7 +189,7 @@ impl DeferredPipeline {
             }
         )?;
         
-        for instances in self.material_batches.values() {
+        for instances in self.material_batches.clone().unwrap().values() {
             secondary.bind_pipeline_graphics(self.gbuffer_graphics_pipeline.clone())?;
             
             for instance in instances {
@@ -223,12 +228,16 @@ impl DeferredPipeline {
         secondary.build().map_err(NimbusError::from)
     }
 
+    pub fn debug_subpass(&self, ctx: &RenderContext) -> NimbusResult<Arc<SecondaryAutoCommandBuffer>> {
+        todo!()
+    }
+
     pub fn lighting_subpass(&self, _ctx: &RenderContext) -> NimbusResult<Arc<SecondaryAutoCommandBuffer>> {
         todo!()
     }
 }
 
-fn create_image(ctx: &RenderContext, format: Format) -> NimbusResult<Arc<Image>> {
+fn create_image(ctx: &RenderContext, format: Format, usage: ImageUsage) -> NimbusResult<Arc<Image>> {
     let extent = ctx.swapchain.image_extent();
     Image::new(
         ctx.memory_allocator.clone(),
@@ -236,7 +245,7 @@ fn create_image(ctx: &RenderContext, format: Format) -> NimbusResult<Arc<Image>>
             image_type: ImageType::Dim2d,
             format,
             extent: [extent[0], extent[1], 1],
-            usage: ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC,
+            usage,
             ..Default::default()
         },
         AllocationCreateInfo {
@@ -259,8 +268,13 @@ impl RenderPipeline for DeferredPipeline {
 
         primary.build().map_err(NimbusError::from)
     }
+
+    fn get_graphics_pipeline(&self) -> Arc<GraphicsPipeline> {
+        self.gbuffer_graphics_pipeline.clone()
+    }
 }
 
+#[derive(Clone)]
 struct RenderInstance {
     object: Arc<SceneObject>,
     submesh: Arc<Submesh>

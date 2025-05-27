@@ -1,10 +1,23 @@
 #version 450
-vec2 positions[3] = vec2[](
-vec2(0.0, -0.5),
-vec2(0.5, 0.5),
-vec2(-0.5, 0.5)
-);
+
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 uv;
+
+layout(location = 0) out vec3 fragPos;
+layout(location = 1) out vec3 fragNormal;
+layout(location = 2) out vec2 fragTexCoord;
+
+layout(set = 0, binding = 0) uniform Matrices {
+    mat4 model;
+    mat4 view;
+    mat4 projection;
+} matrices;
 
 void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    mat4 modelView = matrices.view * matrices.model;
+    fragPos = vec3(modelView * vec4(position, 1.0));
+    fragNormal = mat3(transpose(inverse(modelView))) * normal;
+    fragTexCoord = uv;
+    gl_Position = matrices.projection * vec4(fragPos, 1.0);
 }

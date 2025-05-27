@@ -13,8 +13,8 @@ pub struct CameraUbo {
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug, BufferContents, Vertex)]
 pub struct VertexBuffer {
-    #[format(R32G32B32A32_SFLOAT)]
-    pub position: Vec4,
+    #[format(R32G32B32_SFLOAT)]
+    pub position: Vec3,
     #[format(R32G32B32_SFLOAT)]
     pub normal: Vec3,
     #[format(R32G32_SFLOAT)]

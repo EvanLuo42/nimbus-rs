@@ -16,14 +16,12 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 pub use winit::window::WindowAttributes;
 use winit::window::{Window, WindowId};
-use crate::scene::Scene;
 
 #[derive(Default)]
 pub struct Engine {
     window: Option<Arc<Window>>,
     renderer: Option<Renderer>,
-    window_attributes: WindowAttributes,
-    scene: Arc<Scene>
+    window_attributes: WindowAttributes
 }
 
 impl Engine {

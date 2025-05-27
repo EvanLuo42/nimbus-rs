@@ -11,3 +11,5 @@ rayon = "1.10"
 num_cpus = "1.16"
 glam = { version = "0.30", features = ["bytemuck"] }
 vulkano-shaders = "0.35"
+gltf = "1.4"
+image = "0.25"

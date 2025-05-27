@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassBeginInfo, SubpassContents, SubpassEndInfo};
 use vulkano::image::view::ImageView;
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass};
 use crate::core::errors::{NimbusError, NimbusResult};
 use crate::rendering::context::RenderContext;
@@ -75,5 +76,9 @@ impl RenderPipeline for ClearPipeline {
             }
         )?.end_render_pass(SubpassEndInfo::default())?;
         primary.build().map_err(NimbusError::from)
+    }
+
+    fn get_graphics_pipeline(&self) -> Arc<GraphicsPipeline> {
+        unimplemented!()
     }
 }

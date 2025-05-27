@@ -1,10 +1,10 @@
 use crate::rendering::buffers::VertexBuffer;
-use crate::rendering::material::Material;
+use crate::resources::material::Material;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 
 pub struct Mesh {
-    pub vertex_buffer: Subbuffer<Vec<VertexBuffer>>,
+    pub vertex_buffer: Subbuffer<[VertexBuffer]>,
     pub index_buffer: Subbuffer<[u32]>,
     pub submeshes: Vec<Arc<Submesh>>
 }
