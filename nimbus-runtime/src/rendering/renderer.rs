@@ -1,7 +1,7 @@
 use crate::core::errors::NimbusError;
 use crate::rendering::context::RenderContext;
 use crate::rendering::frame::FrameManager;
-use crate::rendering::render_pass::RenderPass;
+use crate::rendering::pipeline::{BasicPipeline, RenderPipeline};
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::cmp::max;
 use std::sync::Arc;
@@ -11,7 +11,7 @@ pub struct Renderer {
     pub render_context: RenderContext,
     pub render_thread_pool: ThreadPool,
     pub frame_manager: FrameManager,
-    pub render_passes: Vec<Arc<RenderPass>>
+    pub pipeline: Arc<dyn RenderPipeline>
 }
 
 impl Renderer {
@@ -21,15 +21,22 @@ impl Renderer {
             .num_threads(max(1, (num_cpus::get() as isize - 2) as usize))
             .thread_name(|i| format!("RenderWorker-{i}"))
             .build()?;
-
-        todo!()
+        let pipeline = Arc::new(BasicPipeline::new(&render_context)?);
+        Ok(
+            Self {
+                render_context,
+                render_thread_pool,
+                frame_manager: FrameManager,
+                pipeline,
+            }
+        )
     }
 
     pub fn render(&self) -> Result<(), NimbusError> {
         let frame = self.frame_manager.begin_frame(&self.render_context)?;
-        let commands = self.render_passes.iter()
-            .map(|pass| pass.record_commands(&self.render_context))
-            .collect::<Result<_, _>>()?;
+
+        let commands = self.pipeline.record_commands(&self.render_context, &frame)?;
+
         self.frame_manager.end_frame(&self.render_context, frame, commands)?;
         Ok(())
     }

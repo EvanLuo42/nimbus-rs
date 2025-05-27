@@ -19,16 +19,9 @@ impl FrameManager {
         )
     }
     
-    pub fn end_frame(&self, ctx: &RenderContext, frame: FrameContext, commands: Vec<Arc<PrimaryAutoCommandBuffer>>) -> Result<(), NimbusError> {
-        let mut future = frame.future.boxed();
-
-        for command in commands {
-            future = future
-                .then_execute(ctx.graphics_queue.clone(), command.clone())?
-                .boxed();
-        }
-        
-        future
+    pub fn end_frame(&self, ctx: &RenderContext, frame: FrameContext, commands: Arc<PrimaryAutoCommandBuffer>) -> Result<(), NimbusError> {
+        frame.future
+            .then_execute(ctx.graphics_queue.clone(), commands)?
             .then_swapchain_present(
                 ctx.graphics_queue.clone(),
                 SwapchainPresentInfo::swapchain_image_index(

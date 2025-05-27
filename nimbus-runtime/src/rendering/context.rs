@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::device::physical::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Queue, QueueCreateInfo, QueueFlags};
-use vulkano::image::ImageUsage;
+use vulkano::image::{Image, ImageUsage};
 use vulkano::instance::{Instance, InstanceCreateFlags, InstanceCreateInfo, InstanceExtensions};
 use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::swapchain::{Surface, Swapchain, SwapchainCreateInfo};
@@ -18,6 +18,7 @@ pub struct RenderContext {
     pub device: Arc<Device>,
     pub graphics_queue: Arc<Queue>,
     pub swapchain: Arc<Swapchain>,
+    pub images: Vec<Arc<Image>>,
     pub memory_allocator: Arc<StandardMemoryAllocator>,
     pub command_allocator: Arc<StandardCommandBufferAllocator>
 }
@@ -79,7 +80,7 @@ impl RenderContext {
             .surface_formats(&surface, Default::default())
             ?[0].0;
 
-        let (swapchain, _) = Swapchain::new(
+        let (swapchain, images) = Swapchain::new(
             device.clone(),
             surface.clone(),
             SwapchainCreateInfo {
@@ -107,6 +108,7 @@ impl RenderContext {
                 device,
                 graphics_queue,
                 swapchain,
+                images,
                 memory_allocator,
                 command_allocator,
             }

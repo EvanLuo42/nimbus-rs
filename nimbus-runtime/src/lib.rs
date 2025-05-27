@@ -61,7 +61,7 @@ impl ApplicationHandler for Engine {
                     let _ = renderer.render();
                 }
                 self.window.as_ref().unwrap().request_redraw();
-            }
+            },
             _ => {}
         }
     }
