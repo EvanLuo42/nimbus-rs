@@ -2,11 +2,11 @@ use crate::core::errors::NimbusError;
 use crate::rendering::context::RenderContext;
 use crate::rendering::frame::FrameManager;
 use crate::rendering::pipeline::RenderPipeline;
+use crate::rendering::pipelines::clear::ClearPipeline;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::cmp::max;
 use std::sync::Arc;
 use winit::window::Window;
-use crate::rendering::pipelines::clear::ClearPipeline;
 
 pub struct Renderer {
     pub render_context: RenderContext,

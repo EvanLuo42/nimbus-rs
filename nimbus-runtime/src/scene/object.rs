@@ -1,7 +1,8 @@
-pub struct GameObject {
-    transform: Transform
-}
+use crate::rendering::mesh::Mesh;
+use glam::Mat4;
+use std::sync::Arc;
 
-pub struct Transform {
-    
+pub struct SceneObject {
+    pub mesh: Arc<Mesh>,
+    pub model: Mat4
 }

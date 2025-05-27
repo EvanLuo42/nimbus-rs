@@ -10,3 +10,4 @@ thiserror = "2.0"
 rayon = "1.10"
 num_cpus = "1.16"
 glam = { version = "0.30", features = ["bytemuck"] }
+vulkano-shaders = "0.35"

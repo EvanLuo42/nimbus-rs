@@ -5,3 +5,6 @@ pub mod buffer;
 pub mod frame;
 pub mod pipeline;
 pub mod pipelines;
+pub mod mesh;
+pub mod buffers;
+pub mod material;
