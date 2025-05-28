@@ -16,6 +16,12 @@ pub struct MaterialManager {
     materials: HashMap<MaterialId, Arc<Material>>,
 }
 
+impl Default for MaterialManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MaterialManager {
     pub fn new() -> Self {
         Self {
