@@ -1,6 +1,6 @@
 use crate::core::errors::NimbusError;
 use std::sync::Arc;
-use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
+use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::physical::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Queue, QueueCreateInfo, QueueFlags};
@@ -99,7 +99,11 @@ impl RenderContext {
         
         let command_allocator = Arc::new(StandardCommandBufferAllocator::new(
             device.clone(),
-            Default::default()
+            StandardCommandBufferAllocatorCreateInfo {
+                primary_buffer_count: 1,
+                secondary_buffer_count: 10,
+                ..Default::default()
+            }
         ));
         
         let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(

@@ -87,7 +87,7 @@ impl DeferredPipeline {
             let final_color_image = create_image(ctx, swapchain_image_format, ImageUsage::COLOR_ATTACHMENT)?;
             let diffuse_image = create_image(ctx, Format::R8G8B8A8_UNORM, ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED | ImageUsage::INPUT_ATTACHMENT)?;
             let normal_image = create_image(ctx, Format::R16G16B16A16_SFLOAT, ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED | ImageUsage::INPUT_ATTACHMENT)?;
-            let depth_image = create_image(ctx, Format::D32_SFLOAT, ImageUsage::DEPTH_STENCIL_ATTACHMENT)?;
+            let depth_image = create_image(ctx, Format::D32_SFLOAT, ImageUsage::DEPTH_STENCIL_ATTACHMENT | ImageUsage::INPUT_ATTACHMENT)?;
 
             let final_color_view = ImageView::new_default(final_color_image)?;
             let diffuse_view = ImageView::new_default(diffuse_image)?;
@@ -147,10 +147,6 @@ impl DeferredPipeline {
                 }),
                 rasterization_state: Some(RasterizationState::default()),
                 multisample_state: Some(MultisampleState::default()),
-                color_blend_state: Some(ColorBlendState::with_attachment_states(
-                    gbuffer_subpass.num_color_attachments(),
-                    ColorBlendAttachmentState::default()
-                )),
                 depth_stencil_state: Some(DepthStencilState {
                     depth: Some(DepthState::simple()),
                     ..Default::default()
@@ -196,10 +192,7 @@ impl DeferredPipeline {
                     lighting_subpass.num_color_attachments(),
                     ColorBlendAttachmentState::default()
                 )),
-                depth_stencil_state: Some(DepthStencilState {
-                    depth: Some(DepthState::simple()),
-                    ..Default::default()
-                }),
+                depth_stencil_state: None,
                 subpass: Some(lighting_subpass.into()),
                 ..GraphicsPipelineCreateInfo::layout(lighting_layout)
             }
@@ -225,8 +218,7 @@ impl DeferredPipeline {
                 render_pass: Some(CommandBufferInheritanceRenderPassType::BeginRenderPass(CommandBufferInheritanceRenderPassInfo {
                     subpass: Subpass::from(self.deferred_pass.clone(), 0).unwrap(),
                     framebuffer: Some(self.framebuffers[frame.image_index as usize].clone()),
-                }
-                )),
+                })),
                 ..Default::default()
             }
         )?;
