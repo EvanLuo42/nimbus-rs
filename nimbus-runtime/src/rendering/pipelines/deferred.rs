@@ -9,6 +9,8 @@ use crate::scene::object::SceneObject;
 use std::collections::HashMap;
 use std::sync::Arc;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferInheritanceInfo, CommandBufferInheritanceRenderPassInfo, CommandBufferInheritanceRenderPassType, CommandBufferUsage, PrimaryAutoCommandBuffer, SecondaryAutoCommandBuffer};
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutCreateInfo};
 use vulkano::format::Format;
 use vulkano::image::view::ImageView;
 use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
@@ -236,7 +238,19 @@ impl DeferredPipeline {
                     self.gbuffer_graphics_pipeline.layout().clone(),
                     0,
                     vec![
-                        submesh.material.descriptor_set.clone()
+                        // TODO: Camera UBO descriptor set
+                        DescriptorSet::new(
+                            ctx.descriptor_set_allocator.clone(),
+                            self.gbuffer_graphics_pipeline.layout().set_layouts()[0].clone(), 
+                            [
+                                WriteDescriptorSet::sampler(0, submesh.material.sampler.clone()),
+                                WriteDescriptorSet::image_view(1, submesh.material.textures.base_color.clone()),
+                                WriteDescriptorSet::image_view(2, submesh.material.textures.albedo.clone()),
+                                WriteDescriptorSet::image_view(3, submesh.material.textures.specular.clone()),
+                                WriteDescriptorSet::image_view(4, submesh.material.textures.normal.clone()),
+                            ], 
+                            []
+                        )?
                     ]
                 )?;
                 
