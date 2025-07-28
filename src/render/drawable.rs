@@ -8,9 +8,3 @@ pub struct Drawable {
     pub material: Material,
     pub model_matrix: Matrix4<f32>
 }
-
-#[derive(Copy, Clone)]
-pub enum DrawableType {
-    Opaque,
-    Transparent
-}

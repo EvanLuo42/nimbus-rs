@@ -13,9 +13,9 @@ use wgpu::{
 #[derive(Clone)]
 pub struct Pipeline {
     pub render_pipeline: RenderPipeline,
-    pub bind_group_layout: BindGroupLayout,
+    pub material_bind_group_layout: BindGroupLayout,
     pub pipeline_layout: PipelineLayout,
-    pub bind_group: BindGroup,
+    pub material_bind_group: BindGroup
 }
 
 #[derive(Default, Clone)]
@@ -40,10 +40,10 @@ impl PipelineCache {
         device: &Device,
         config: &SurfaceConfiguration,
     ) -> Pipeline {
-        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        let material_bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &drawable.material.ty.bind_group_layout_entries(),
             label: Some(&format!(
-                "{} Bind Group Layout",
+                "{} Material Bind Group Layout",
                 drawable.material.name.clone()
             )),
         });
@@ -53,7 +53,7 @@ impl PipelineCache {
                 "{} Render Pipeline Layout",
                 drawable.material.name.clone()
             )),
-            bind_group_layouts: &[&bind_group_layout],
+            bind_group_layouts: &[&material_bind_group_layout],
             push_constant_ranges: &drawable.material.ty.push_constant_ranges(),
         });
 
@@ -170,17 +170,17 @@ impl PipelineCache {
             }
         }
 
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+        let material_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some(&format!("{} Bind Group", drawable.material.name.clone())),
-            layout: &bind_group_layout,
+            layout: &material_bind_group_layout,
             entries: &entries,
         });
 
         Pipeline {
-            bind_group_layout,
+            material_bind_group_layout,
             pipeline_layout,
             render_pipeline,
-            bind_group,
+            material_bind_group,
         }
     }
 }

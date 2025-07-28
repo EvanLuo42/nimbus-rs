@@ -1,25 +1,29 @@
+use crate::render::camera::{Camera, CameraUniform};
 use crate::render::drawable::Drawable;
 use crate::render::pipeline::PipelineCache;
+use bytemuck::cast_slice;
+use std::num::NonZeroU64;
 use std::sync::Arc;
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::wgt::{CommandEncoderDescriptor, TextureViewDescriptor};
-use wgpu::{
-    Adapter, Backends, Color, CommandEncoder, Device, IndexFormat, Instance, InstanceDescriptor,
-    LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor,
-    RequestAdapterOptions, StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureUsages,
-    TextureView,
-};
+use wgpu::{Adapter, Backends, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferUsages, Color, CommandEncoder, Device, IndexFormat, Instance, InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptions, ShaderStages, StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureUsages, TextureView};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
 pub struct Renderer<'window> {
-    instance: Instance,
-    surface: Surface<'window>,
-    surface_config: SurfaceConfiguration,
-    adapter: Adapter,
-    device: Device,
-    queue: Queue,
-    pipeline_cache: PipelineCache,
-    render_queue: Vec<Drawable>,
+    pub instance: Instance,
+    pub surface: Surface<'window>,
+    pub surface_config: SurfaceConfiguration,
+    pub adapter: Adapter,
+    pub device: Device,
+    pub queue: Queue,
+    pub pipeline_cache: PipelineCache,
+    pub render_queue: Vec<Drawable>,
+    
+    camera_uniform: CameraUniform,
+    camera_buffer: Buffer,
+    camera_bind_group_layout: BindGroupLayout,
+    camera_bind_group: BindGroup
 }
 
 impl<'window> Renderer<'window> {
@@ -69,6 +73,39 @@ impl<'window> Renderer<'window> {
                 trace: wgpu::Trace::Off,
             })
             .await?;
+        
+        let camera_uniform = CameraUniform::new();
+        let camera_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: cast_slice(&[camera_uniform]),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST
+        });
+        
+        let camera_bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("Camera Bind Group Layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(size_of::<CameraUniform>() as u64).unwrap()),
+                    },
+                    count: None,
+                }
+            ],
+        });
+        let camera_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("Camera Bind Group"),
+            layout: &camera_bind_group_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding()
+                }
+            ],
+        });
 
         Ok(Renderer {
             instance,
@@ -77,6 +114,10 @@ impl<'window> Renderer<'window> {
             adapter,
             device,
             queue,
+            camera_uniform,
+            camera_buffer,
+            camera_bind_group_layout,
+            camera_bind_group,
             pipeline_cache: Default::default(),
             render_queue: Default::default(),
         })
@@ -95,6 +136,7 @@ impl<'window> Renderer<'window> {
         frame_context.view = Some(view);
         frame_context.encoder = Some(encoder);
         frame_context.output = Some(output);
+        
         Ok(())
     }
 
@@ -130,7 +172,8 @@ impl<'window> Renderer<'window> {
                 self.pipeline_cache
                     .get_or_create(&drawable, &self.device, &self.surface_config);
             main_render_pass.set_pipeline(&pipeline.render_pipeline);
-            main_render_pass.set_bind_group(0, &pipeline.bind_group, &[]);
+            main_render_pass.set_bind_group(0, &pipeline.material_bind_group, &[]);
+            main_render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 
             main_render_pass.set_vertex_buffer(0, drawable.mesh.vertex_buffer.slice(..));
             match &drawable.mesh.index_buffer {
@@ -156,6 +199,10 @@ impl<'window> Renderer<'window> {
 
     pub fn submit(&mut self, drawable: Drawable) {
         self.render_queue.push(drawable)
+    }
+    
+    pub fn submit_camera(&mut self, camera: &Camera) {
+        self.camera_uniform.update_view_proj(camera);
     }
 }
 

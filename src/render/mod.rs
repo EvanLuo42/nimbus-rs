@@ -4,3 +4,4 @@ pub mod mesh;
 pub mod material;
 pub mod scene;
 pub mod pipeline;
+mod camera;
