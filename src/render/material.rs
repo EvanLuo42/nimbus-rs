@@ -1,4 +1,7 @@
-use wgpu::{BindGroupLayoutEntry, BindingType, Color, PushConstantRange, Sampler, SamplerBindingType, ShaderModule, ShaderStages, Texture, TextureSampleType, TextureView, TextureViewDimension};
+use wgpu::{
+    BindGroupLayoutEntry, BindingType, Color, PushConstantRange, Sampler, SamplerBindingType,
+    ShaderModule, ShaderStages, Texture, TextureSampleType, TextureView, TextureViewDimension,
+};
 
 #[derive(Clone)]
 pub struct Material {
@@ -15,16 +18,13 @@ impl Material {
                 BaseColorType::Factor { color } => color.a < 1.0,
                 BaseColorType::Texture { .. } => true,
             },
-            MaterialType::Pbr {
-                base_color,
-                ..
-            } => match base_color {
+            MaterialType::Pbr { base_color, .. } => match base_color {
                 BaseColorType::Factor { color } => color.a < 1.0,
                 BaseColorType::Texture { .. } => true,
             },
             MaterialType::Custom => {
                 unimplemented!()
-            },
+            }
         }
     }
 }
@@ -33,12 +33,12 @@ impl Material {
 pub enum MaterialType {
     Pbr {
         base_color: BaseColorType,
-        metallic_roughness: MetallicRoughnessType
+        metallic_roughness: MetallicRoughnessType,
     },
     Unlit {
-        base_color: BaseColorType
+        base_color: BaseColorType,
     },
-    Custom
+    Custom,
 }
 
 impl MaterialType {
@@ -46,7 +46,10 @@ impl MaterialType {
         let mut entries = vec![];
 
         match self {
-            MaterialType::Pbr { base_color, metallic_roughness } => {
+            MaterialType::Pbr {
+                base_color,
+                metallic_roughness,
+            } => {
                 if let BaseColorType::Texture { .. } = base_color {
                     Self::push_entry(&mut entries, 0);
                 }
@@ -87,9 +90,9 @@ impl MaterialType {
             ty: BindingType::Texture {
                 sample_type: TextureSampleType::Float { filterable: true },
                 view_dimension: TextureViewDimension::D2,
-                multisampled: true
+                multisampled: true,
             },
-            count: None
+            count: None,
         });
         entries.push(BindGroupLayoutEntry {
             binding: binding + 1,
@@ -103,13 +106,13 @@ impl MaterialType {
 #[derive(Clone)]
 pub enum BaseColorType {
     Factor {
-        color: Color
+        color: Color,
     },
     Texture {
         texture: Texture,
         texture_view: TextureView,
         sampler: Sampler,
-    }
+    },
 }
 
 #[derive(Clone)]
@@ -117,12 +120,12 @@ pub enum MetallicRoughnessType {
     Texture {
         texture: Texture,
         texture_view: TextureView,
-        sampler: Sampler
+        sampler: Sampler,
     },
     Factor {
         metallic: Option<f32>,
-        roughness: Option<f32>
-    }
+        roughness: Option<f32>,
+    },
 }
 
 pub type RawMaterial<'a> = gltf::Material<'a>;

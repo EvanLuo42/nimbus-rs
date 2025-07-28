@@ -6,8 +6,7 @@ use crate::render::mesh::Mesh;
 pub struct Drawable {
     pub mesh: Mesh,
     pub material: Material,
-    pub model_matrix: Matrix4<f32>,
-    pub drawable_type: DrawableType
+    pub model_matrix: Matrix4<f32>
 }
 
 #[derive(Copy, Clone)]

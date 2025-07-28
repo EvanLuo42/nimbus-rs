@@ -8,7 +8,7 @@ pub struct Mesh {
     pub vertex_count: u32,
 
     pub vertex_attributes: Vec<VertexAttribute>,
-    pub array_stride: BufferAddress
+    pub array_stride: BufferAddress,
 }
 
 impl Mesh {

@@ -1,10 +1,15 @@
+use crate::render::drawable::Drawable;
+use crate::render::pipeline::PipelineCache;
 use std::sync::Arc;
-use wgpu::{Adapter, Backends, Buffer, Color, CommandEncoder, Device, IndexFormat, Instance, InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptions, StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureUsages, TextureView};
 use wgpu::wgt::{CommandEncoderDescriptor, TextureViewDescriptor};
+use wgpu::{
+    Adapter, Backends, Color, CommandEncoder, Device, IndexFormat, Instance, InstanceDescriptor,
+    LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor,
+    RequestAdapterOptions, StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureUsages,
+    TextureView,
+};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
-use crate::render::drawable::{Drawable, DrawableType};
-use crate::render::pipeline::PipelineCache;
 
 pub struct Renderer<'window> {
     instance: Instance,
@@ -14,12 +19,12 @@ pub struct Renderer<'window> {
     device: Device,
     queue: Queue,
     pipeline_cache: PipelineCache,
-    render_queue: RenderQueue,
+    render_queue: Vec<Drawable>,
 }
 
 impl<'window> Renderer<'window> {
     pub async fn new(window: Arc<Window>) -> crate::Result<Renderer<'window>> {
-        let PhysicalSize{width, height} = window.inner_size();
+        let PhysicalSize { width, height } = window.inner_size();
 
         let instance = Instance::new(&InstanceDescriptor {
             backends: Backends::PRIMARY,
@@ -28,14 +33,18 @@ impl<'window> Renderer<'window> {
 
         let surface = instance.create_surface(window.clone())?;
 
-        let adapter = instance.request_adapter(&RequestAdapterOptions {
-            power_preference: PowerPreference::default(),
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false
-        }).await?;
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await?;
 
         let surface_caps = surface.get_capabilities(&adapter);
-        let surface_format = surface_caps.formats.iter()
+        let surface_format = surface_caps
+            .formats
+            .iter()
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
@@ -48,7 +57,7 @@ impl<'window> Renderer<'window> {
             present_mode: surface_caps.present_modes[0],
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 2
+            desired_maximum_frame_latency: 2,
         };
 
         let (device, queue) = adapter
@@ -69,16 +78,20 @@ impl<'window> Renderer<'window> {
             device,
             queue,
             pipeline_cache: Default::default(),
-            render_queue: Default::default()
+            render_queue: Default::default(),
         })
     }
 
     pub fn begin_frame(&mut self, frame_context: &mut FrameContext) -> crate::Result<()> {
         let output = self.surface.get_current_texture()?;
-        let view = output.texture.create_view(&TextureViewDescriptor::default());
-        let encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
-            label: Some("Main Encoder")
-        });
+        let view = output
+            .texture
+            .create_view(&TextureViewDescriptor::default());
+        let encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor {
+                label: Some("Main Encoder"),
+            });
         frame_context.view = Some(view);
         frame_context.encoder = Some(encoder);
         frame_context.output = Some(output);
@@ -86,33 +99,36 @@ impl<'window> Renderer<'window> {
     }
 
     pub fn end_frame(&mut self, frame_context: &mut FrameContext) {
-        let mut main_render_pass = frame_context.encoder.as_mut().unwrap().begin_render_pass(&RenderPassDescriptor {
-            label: Some("Main Render Pass"),
-            color_attachments: &[
-                Some(RenderPassColorAttachment {
-                    view: frame_context.view.as_ref().unwrap(),
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Clear(
-                            Color {
+        let mut main_render_pass =
+            frame_context
+                .encoder
+                .as_mut()
+                .unwrap()
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: Some("Main Render Pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: frame_context.view.as_ref().unwrap(),
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Clear(Color {
                                 r: 0.1,
                                 g: 0.2,
                                 b: 0.3,
                                 a: 1.0,
-                            }
-                        ),
-                        store: StoreOp::Store
-                    }
-                })
-            ],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
+                            }),
+                            store: StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
 
-        for drawable in self.render_queue.opaque_drawables.iter() {
-            let pipeline = self.pipeline_cache.get_or_create(&drawable, &self.device, &self.surface_config);
+        for drawable in self.render_queue.iter() {
+            let pipeline =
+                self.pipeline_cache
+                    .get_or_create(&drawable, &self.device, &self.surface_config);
             main_render_pass.set_pipeline(&pipeline.render_pipeline);
             main_render_pass.set_bind_group(0, &pipeline.bind_group, &[]);
 
@@ -135,27 +151,17 @@ impl<'window> Renderer<'window> {
         self.queue.submit(Some(encoder.finish()));
         output.present();
 
-        self.render_queue.opaque_drawables.clear();
-        self.render_queue.transparent_drawables.clear();
+        self.render_queue.clear();
     }
 
     pub fn submit(&mut self, drawable: Drawable) {
-        match drawable.drawable_type {
-            DrawableType::Opaque => self.render_queue.opaque_drawables.push(drawable),
-            DrawableType::Transparent => self.render_queue.transparent_drawables.push(drawable)
-        }
+        self.render_queue.push(drawable)
     }
-}
-
-#[derive(Clone, Default)]
-pub struct RenderQueue {
-    pub opaque_drawables: Vec<Drawable>,
-    pub transparent_drawables: Vec<Drawable>
 }
 
 #[derive(Default)]
 pub struct FrameContext {
     encoder: Option<CommandEncoder>,
     view: Option<TextureView>,
-    output: Option<SurfaceTexture>
+    output: Option<SurfaceTexture>,
 }
